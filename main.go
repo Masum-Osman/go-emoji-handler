@@ -29,8 +29,6 @@ func init() {
 	if err != nil {
 		panic(err.Error())
 	}
-
-	// defer DB.Close()
 }
 
 func emojiHandler(w http.ResponseWriter, r *http.Request) {
@@ -42,17 +40,17 @@ func emojiHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			panic(err.Error())
 		}
+		var emoji Emojis
 
 		for result.Next() {
-			var emoji Emojis
 			err = result.Scan(&emoji.Username, &emoji.Emoji)
 
 			if err != nil {
 				panic(err.Error())
 			}
 		}
+		fmt.Fprint(w, emoji)
 
-		fmt.Println(result)
 	case "POST":
 		d := json.NewDecoder(r.Body)
 		p := &person{}
@@ -72,6 +70,9 @@ func main() {
 
 	log.Println("Go!")
 	http.ListenAndServe(":8001", nil)
+
+	defer DB.Close()
+
 }
 
 /*
