@@ -53,11 +53,13 @@ func emojiHandler(w http.ResponseWriter, r *http.Request) {
 
 	case "POST":
 		d := json.NewDecoder(r.Body)
-		p := &person{}
-		err := d.Decode(p)
+		emoji := &Emojis{}
+		err := d.Decode(emoji)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
+
+		DB.Query("INSERT INTO emojis(user_name, emoji) VALUES (?, ?);", emoji.Username, emoji.Emoji)
 	default:
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		fmt.Fprintf(w, "I can't do that.")
