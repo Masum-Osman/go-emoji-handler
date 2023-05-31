@@ -1,10 +1,13 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
+
+	_ "github.com/go-sql-driver/mysql"
 )
 
 type person struct {
@@ -12,20 +15,44 @@ type person struct {
 	Age  int    `json:"age"`
 }
 
-var tom *person = &person{
-	Name: "Tom",
-	Age:  28,
+type Emojis struct {
+	Username string `json:"user_name"`
+	Emoji    string `json:"emoji"`
 }
 
-var httpQueries = ""
+var DB *sql.DB
+var err error
+
+func init() {
+	DB, err = sql.Open("mysql", "root:password@tcp(127.0.0.1:3306)/tl_ancillaries")
+
+	if err != nil {
+		panic(err.Error())
+	}
+
+	// defer DB.Close()
+}
 
 func emojiHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
-		rawQuery := r.URL.Query()
-		emojis := rawQuery["text"][0]
-		httpQueries = httpQueries + emojis
-		fmt.Fprintf(w, httpQueries)
+		URLQuery := r.URL.Query()
+		user_name := URLQuery["user_name"][0]
+		result, err := DB.Query("SELECT user_name, emoji from emojis WHERE user_name = ?", user_name)
+		if err != nil {
+			panic(err.Error())
+		}
+
+		for result.Next() {
+			var emoji Emojis
+			err = result.Scan(&emoji.Username, &emoji.Emoji)
+
+			if err != nil {
+				panic(err.Error())
+			}
+		}
+
+		fmt.Println(result)
 	case "POST":
 		d := json.NewDecoder(r.Body)
 		p := &person{}
@@ -33,7 +60,6 @@ func emojiHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
-		tom = p
 	default:
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		fmt.Fprintf(w, "I can't do that.")
@@ -47,3 +73,11 @@ func main() {
 	log.Println("Go!")
 	http.ListenAndServe(":8001", nil)
 }
+
+/*
+	var httpQueries = ""
+	rawQuery := r.URL.Query()
+	emojis := rawQuery["text"][0]
+	httpQueries = httpQueries + emojis
+	fmt.Fprintf(w, httpQueries)
+*/
